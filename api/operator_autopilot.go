@@ -111,6 +111,122 @@ type OperatorHealthReply struct {
 	Servers []ServerHealth
 }
 
+type AutopilotState struct {
+	Healthy                    bool
+	FailureTolerance           int
+	OptimisitcFailureTolerance int
+
+	Servers         map[string]AutopilotServer
+	Leader          string
+	Voters          []string
+	ReadReplicas    []string                 `json:",omitempty"`
+	RedundancyZones map[string]AutopilotZone `json:",omitempty"`
+	Upgrade         *AutopilotUpgrade        `json:",omitempty"`
+}
+
+type AutopilotServer struct {
+	ID             string
+	Name           string
+	Address        string
+	NodeStatus     string
+	Version        string
+	LastContact    *ReadableDuration
+	LastTerm       uint64
+	LastIndex      uint64
+	Healthy        bool
+	StableSince    time.Time
+	RedundancyZone string `json:",omitempty"`
+	UpgradeVersion string `json:",omitempty"`
+	ReadReplica    bool   `json:",omitempty"` // TODO (autopilot) it would be great if this was a *bool for omitempty to only show up in enterprise
+	Status         AutopilotServerStatus
+	Meta           map[string]string
+	NodeType       AutopilotServerType
+}
+
+type AutopilotServerStatus string
+
+const (
+	AutopilotServerNone     AutopilotServerStatus = "none"
+	AutopilotServerLeader   AutopilotServerStatus = "leader"
+	AutopilotServerVoter    AutopilotServerStatus = "voter"
+	AutopilotServerNonVoter AutopilotServerStatus = "non-voter"
+	AutopilotServerStaging  AutopilotServerStatus = "staging"
+)
+
+type AutopilotServerType string
+
+const (
+	AutopilotTypeVoter          AutopilotServerType = "voter"
+	AutopilotTypeReadReplica    AutopilotServerType = "read-replica"
+	AutopilotTypeZoneVoter      AutopilotServerType = "zone-voter"
+	AutopilotTypeZoneExtraVoter AutopilotServerType = "zone-extra-voter"
+	AutopilotTypeZoneStandby    AutopilotServerType = "zone-standby"
+)
+
+type AutopilotZone struct {
+	Servers          []string
+	Voters           []string
+	FailureTolerance int
+}
+
+type AutopilotZoneUpgradeVersions struct {
+	TargetVersionVoters    []string `json:",omitempty"`
+	TargetVersionNonVoters []string `json:",omitempty"`
+	OtherVersionVoters     []string `json:",omitempty"`
+	OtherVersionNonVoters  []string `json:",omitempty"`
+}
+
+type AutopilotUpgrade struct {
+	Status                    AutopilotUpgradeStatus
+	TargetVersion             string                                  `json:",omitempty"`
+	TargetVersionVoters       []string                                `json:",omitempty"`
+	TargetVersionNonVoters    []string                                `json:",omitempty"`
+	TargetVersionReadReplicas []string                                `json:",omitempty"`
+	OtherVersionVoters        []string                                `json:",omitempty"`
+	OtherVersionNonVoters     []string                                `json:",omitempty"`
+	OtherVersionReadReplicas  []string                                `json:",omitempty"`
+	RedundancyZones           map[string]AutopilotZoneUpgradeVersions `json:",omitempty"`
+}
+
+type AutopilotUpgradeStatus string
+
+const (
+	// UpgradeIdle is the status when no upgrade is in progress.
+	UpgradeIdle AutopilotUpgradeStatus = "idle"
+
+	// UpgradeAwaitNewVoters is the status when more servers of
+	// the target version must be added in order to start the promotion
+	// phase of the upgrade
+	UpgradeAwaitNewVoters AutopilotUpgradeStatus = "await-new-voters"
+
+	// UpgradePromoting is the status when autopilot is promoting
+	// servers of the target version.
+	UpgradePromoting AutopilotUpgradeStatus = "promoting"
+
+	// UpgradeDemoting is the status when autopilot is demoting
+	// servers not on the target version
+	UpgradeDemoting AutopilotUpgradeStatus = "demoting"
+
+	// UpgradeLeaderTransfer is the status when autopilot is transferring
+	// leadership from a server running an older version to a server
+	// using the target version.
+	UpgradeLeaderTransfer AutopilotUpgradeStatus = "leader-transfer"
+
+	// UpgradeAwaitNewServers is the status when autpilot has finished
+	// transferring leadership and has demoted all the other versioned
+	// servers but wants to indicate that more target version servers
+	// are needed to replace all the existing other version servers.
+	UpgradeAwaitNewServers AutopilotUpgradeStatus = "await-new-servers"
+
+	// UpgradeAwaitServerRemoval is the status when autopilot is waiting
+	// for the servers on non-target versions to be removed
+	UpgradeAwaitServerRemoval AutopilotUpgradeStatus = "await-server-removal"
+
+	// UpgradeDisabled is the status when automated ugprades are
+	// disabled in the autopilot configuration
+	UpgradeDisabled AutopilotUpgradeStatus = "disabled"
+)
+
 // ReadableDuration is a duration type that is serialized to JSON in human readable format.
 type ReadableDuration time.Duration
 

@@ -904,7 +904,10 @@ func (l *State) updateSyncState() error {
 	if svcNode == nil || svcNode.ID != l.config.NodeID ||
 		!reflect.DeepEqual(svcNode.TaggedAddresses, l.config.TaggedAddresses) ||
 		!reflect.DeepEqual(svcNode.Meta, l.metadata) {
+		l.logger.Info("Node Info is now out of sync")
 		l.nodeInfoInSync = false
+	} else {
+
 	}
 
 	// Check which services need syncing

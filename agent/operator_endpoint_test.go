@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/consul/testrpc"
 	"github.com/stretchr/testify/require"
 
-	"github.com/hashicorp/consul/agent/consul/autopilot"
 	"github.com/hashicorp/consul/agent/structs"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/sdk/testutil/retry"
@@ -403,7 +402,7 @@ func TestOperator_AutopilotSetConfiguration(t *testing.T) {
 		Datacenter: "dc1",
 	}
 
-	var reply autopilot.Config
+	var reply structs.AutopilotConfig
 	if err := a.RPC("Operator.AutopilotGetConfiguration", &args, &reply); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -432,7 +431,7 @@ func TestOperator_AutopilotCASConfiguration(t *testing.T) {
 		Datacenter: "dc1",
 	}
 
-	var reply autopilot.Config
+	var reply structs.AutopilotConfig
 	if err := a.RPC("Operator.AutopilotGetConfiguration", &args, &reply); err != nil {
 		t.Fatalf("err: %v", err)
 	}

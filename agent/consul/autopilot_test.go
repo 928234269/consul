@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -18,28 +19,20 @@ func TestAutopilot_IdempotentShutdown(t *testing.T) {
 	defer s1.Shutdown()
 	retry.Run(t, func(r *retry.R) { r.Check(waitForLeader(s1)) })
 
-	s1.autopilot.Start()
-	s1.autopilot.Start()
-	s1.autopilot.Start()
-	s1.autopilot.Stop()
-	s1.autopilot.Stop()
-	s1.autopilot.Stop()
+	s1.autopilot.Start(context.Background())
+	s1.autopilot.Start(context.Background())
+	s1.autopilot.Start(context.Background())
+	<-s1.autopilot.Stop()
+	<-s1.autopilot.Stop()
+	<-s1.autopilot.Stop()
 }
 
 func TestAutopilot_CleanupDeadServer(t *testing.T) {
-	t.Parallel()
-	for i := 1; i <= 3; i++ {
-		testCleanupDeadServer(t, i)
-	}
-}
-
-func testCleanupDeadServer(t *testing.T, raftVersion int) {
 	dc := "dc1"
 	conf := func(c *Config) {
 		c.Datacenter = dc
 		c.Bootstrap = false
 		c.BootstrapExpect = 5
-		c.RaftConfig.ProtocolVersion = raft.ProtocolVersion(raftVersion)
 	}
 	dir1, s1 := testServerWithConfig(t, conf)
 	defer os.RemoveAll(dir1)
@@ -316,7 +309,7 @@ func TestAutopilot_CleanupStaleRaftServer(t *testing.T) {
 	}
 
 	// Verify we have 4 peers
-	peers, err := s1.numPeers()
+	peers, err := s1.autopilot.NumVoters()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +363,7 @@ func TestAutopilot_PromoteNonVoter(t *testing.T) {
 		if servers[1].Suffrage != raft.Nonvoter {
 			r.Fatalf("bad: %v", servers)
 		}
-		health := s1.autopilot.GetServerHealth(string(servers[1].ID))
+		health := s1.autopilot.GetServerHealth(servers[1].ID)
 		if health == nil {
 			r.Fatal("nil health")
 		}
